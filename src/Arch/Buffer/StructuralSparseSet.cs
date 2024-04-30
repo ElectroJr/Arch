@@ -1,7 +1,7 @@
 using Arch.Core;
 using Arch.Core.Utils;
 
-namespace Arch.CommandBuffer;
+namespace Arch.Buffer;
 
 /// <summary>
 ///     The <see cref="StructuralEntity"/> struct
@@ -203,7 +203,7 @@ internal class StructuralSparseSet
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void AddStructuralSparseArray(ComponentType type)
     {
-        Components[type.Id] = new StructuralSparseArray(type, type.Id);
+        Components[type.Id] = new StructuralSparseArray(type, Capacity);
 
         Used[UsedSize] = type.Id;
         UsedSize++;

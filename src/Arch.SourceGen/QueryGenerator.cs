@@ -4,7 +4,7 @@ using ArchSourceGenerator;
 namespace Arch.SourceGen;
 
 [Generator]
-public class QueryGenerator : IIncrementalGenerator
+public sealed class QueryGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -39,6 +39,7 @@ public class QueryGenerator : IIncrementalGenerator
             references.AppendLine("using System;");
             references.AppendLine("using System.Runtime.CompilerServices;");
             references.AppendLine("using CommunityToolkit.HighPerformance;");
+            references.AppendLine("using Arch.Core.Utils;");
             references.AppendLine("namespace Arch.Core;");
             references.AppendComponents(25);
             references.AppendEntityComponents(25);
@@ -56,7 +57,7 @@ public class QueryGenerator : IIncrementalGenerator
             var accessors = new StringBuilder();
             accessors.AppendLine("using System;");
             accessors.AppendLine("using System.Runtime.CompilerServices;");
-            accessors.AppendLine("using JobScheduler;");
+            accessors.AppendLine("using Schedulers;");
             accessors.AppendLine("using Arch.Core.Utils;");
             accessors.AppendLine("using System.Diagnostics.Contracts;");
             accessors.AppendLine("using Arch.Core.Extensions;");

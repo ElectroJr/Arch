@@ -1,9 +1,10 @@
 using System.Diagnostics.Contracts;
 using System.Threading;
+using Arch.Core.Extensions;
 using Arch.Core.Extensions.Internal;
 using Arch.Core.Utils;
 using Collections.Pooled;
-using JobScheduler;
+using Schedulers;
 using Component = Arch.Core.Utils.Component;
 using ArchArrayExtensions = Arch.Core.Extensions.Internal.ArrayExtensions;
 
@@ -82,6 +83,11 @@ public partial class World
     ///     Tracks how many <see cref="World"/>s exists.
     /// </summary>
     public static int WorldSize { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; [MethodImpl(MethodImplOptions.AggressiveInlining)] private set; }
+
+    /// <summary>
+    ///     The shared static <see cref="JobScheduler"/> used for Multithreading.
+    /// </summary>
+    public static JobScheduler? SharedJobScheduler { get; set; }
 
     /// <summary>
     ///     Creates a <see cref="World"/> instance.
@@ -298,6 +304,14 @@ public partial class World : IDisposable
         EntityInfo.Add(entity.Id, recycled.Version, archetype, slot);
         Size++;
         OnEntityCreated(entity);
+
+#if EVENTS
+        foreach (ref var type in types)
+        {
+            OnComponentAdded(entity, type);
+        }
+#endif
+
         return entity;
     }
 
@@ -344,6 +358,15 @@ public partial class World : IDisposable
     [StructuralChange]
     public void Destroy(Entity entity)
     {
+        #if EVENTS
+        // Raise the OnComponentRemoved event for each component on the entity.
+        var arch = GetArchetype(entity);
+        foreach (var compType in arch.Types)
+        {
+            OnComponentRemoved(entity, compType);
+        }
+        #endif
+
         OnEntityDestroyed(entity);
 
         // Remove from archetype
@@ -379,7 +402,7 @@ public partial class World : IDisposable
         {
             // Remove empty archetypes.
             var archetype = Archetypes[index];
-            if (archetype.Entities == 0)
+            if (archetype.EntityCount == 0)
             {
                 Capacity += archetype.EntitiesPerChunk; // Since the destruction substracts that amount, add it before due to the way we calculate the new capacity.
                 DestroyArchetype(archetype);
@@ -387,8 +410,12 @@ public partial class World : IDisposable
             }
 
             archetype.TrimExcess();
-            Capacity += archetype.Size * archetype.EntitiesPerChunk; // Since always one chunk always exists.
+            Capacity += archetype.ChunkCount * archetype.EntitiesPerChunk; // Since always one chunk always exists.
         }
+
+        // Traverse recycled ids and remove all that are higher than the current capacity.
+        // If we do not do this, a new entity might get a id higher than the entityinfo array which causes it to go out of bounds.
+        RecycledIds.RemoveWhere(entity => entity.Id >= Capacity);
     }
 
     /// <summary>
@@ -409,7 +436,6 @@ public partial class World : IDisposable
         JobHandles.Clear();
         GroupToArchetype.Clear();
         EntityInfo.Clear();
-        RecycledIds.Clear();
         QueryCache.Clear();
 
         // Set archetypes to null to free them manually since Archetypes are set to ClearMode.Never to fix #65
@@ -455,7 +481,7 @@ public partial class World : IDisposable
         var query = Query(in queryDescription);
         foreach (var archetype in query.GetArchetypeIterator())
         {
-            var entities = archetype.Entities;
+            var entities = archetype.EntityCount;
             counter += entities;
         }
 
@@ -772,13 +798,23 @@ public partial class World
         var query = Query(in queryDescription);
         foreach (var archetype in query.GetArchetypeIterator())
         {
-            Size -= archetype.Entities;
+            Size -= archetype.EntityCount;
             foreach (ref var chunk in archetype)
             {
                 ref var entityFirstElement = ref chunk.Entity(0);
                 foreach (var index in chunk)
                 {
                     var entity = Unsafe.Add(ref entityFirstElement, index);
+
+                    #if EVENTS
+                    // Raise the OnComponentRemoved event for each component on the entity.
+                    var arch = GetArchetype(entity);
+                    foreach (var compType in arch.Types)
+                    {
+                        OnComponentRemoved(entity, compType);
+                    }
+                    #endif
+
                     OnEntityDestroyed(entity);
 
                     var version = EntityInfo.GetVersion(entity.Id);
@@ -841,7 +877,7 @@ public partial class World
         foreach (var archetype in query.GetArchetypeIterator())
         {
             // Archetype with T shouldnt be skipped to prevent undefined behaviour.
-            if (archetype.Entities == 0 || archetype.Has<T>())
+            if (archetype.EntityCount == 0 || archetype.Has<T>())
             {
                 continue;
             }
@@ -893,7 +929,7 @@ public partial class World
         foreach (var archetype in query.GetArchetypeIterator())
         {
             // Archetype without T shouldnt be skipped to prevent undefined behaviour.
-            if (archetype.Entities <= 0 || !archetype.Has<T>())
+            if (archetype.EntityCount <= 0 || !archetype.Has<T>())
             {
                 continue;
             }
@@ -1436,6 +1472,24 @@ public partial class World
     public bool IsAlive(Entity entity)
     {
         return EntityInfo.Has(entity.Id);
+    }
+
+    /// <summary>
+    ///     Checks if the <see cref="EntityReference"/> is alive and valid in this <see cref="World"/>.
+    /// </summary>
+    /// <param name="entityReference">The <see cref="EntityReference"/>.</param>
+    /// <returns>True if it exists and is alive, otherwise false.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Pure]
+    public bool IsAlive(EntityReference entityReference)
+    {
+        if (entityReference == EntityReference.Null)
+        {
+            return false;
+        }
+
+        var reference = Reference(entityReference.Entity);
+        return entityReference == reference;
     }
 
     /// <summary>

@@ -1,13 +1,14 @@
 using Arch.Core;
 using Arch.Core.Utils;
+using Schedulers;
 using static NUnit.Framework.Assert;
 
 namespace Arch.Tests;
 
 [TestFixture]
-public partial class QueryTest
+public sealed partial class QueryTest
 {
-    private JobScheduler.JobScheduler _jobScheduler;
+    private JobScheduler _jobScheduler;
     private World? _world;
 
     private static readonly ComponentType[] _entityGroup = { typeof(Transform), typeof(Rotation) };
@@ -19,7 +20,14 @@ public partial class QueryTest
     [OneTimeSetUp]
     public void Setup()
     {
-        _jobScheduler = new JobScheduler.JobScheduler("Test");
+        _jobScheduler = new JobScheduler(new JobScheduler.Config {
+                ThreadPrefixName = "Arch.Samples",
+                ThreadCount = 0,
+                MaxExpectedConcurrentJobs = 64,
+                StrictAllocationMode = false,
+        });
+
+        World.SharedJobScheduler = _jobScheduler;
     }
 
     [OneTimeTearDown]
