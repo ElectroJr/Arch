@@ -93,7 +93,7 @@ internal class EntityInfoStorage
     ///     The <see cref="Entity"/> <see cref="Archetype"/> and <see cref="Slot"/>s in an jagged array.
     /// <remarks>Because usually both are needed and thus an array access can be saved.</remarks>
     /// </summary>
-    internal JaggedArray<EntitySlot> EntitySlots { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; set; }
+    internal JaggedArray<EntitySlot> EntitySlots;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="EntityInfoStorage"/> class.

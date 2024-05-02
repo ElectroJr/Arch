@@ -1024,15 +1024,12 @@ public partial class World
     {
         component = default;
 
-        var slot = EntityInfo.GetSlot(entity.Id);
-        var archetype = EntityInfo.GetArchetype(entity.Id);
+        ref var slot = ref EntityInfo.EntitySlots[entity.Id];
 
-        if (!archetype.Has<T>())
-        {
+        if (!slot.Archetype.Has<T>())
             return false;
-        }
 
-        component = archetype.Get<T>(ref slot);
+        component = slot.Archetype.Get<T>(ref slot.Slot);
         return true;
     }
 
@@ -1047,15 +1044,14 @@ public partial class World
     [Pure]
     public ref T TryGetRef<T>(Entity entity, out bool exists)
     {
-        var slot = EntityInfo.GetSlot(entity.Id);
-        var archetype = EntityInfo.GetArchetype(entity.Id);
+        ref var slot = ref EntityInfo.EntitySlots[entity.Id];
 
-        if (!(exists = archetype.Has<T>()))
+        if (!(exists = slot.Archetype.Has<T>()))
         {
             return ref Unsafe.NullRef<T>();
         }
 
-        return ref archetype.Get<T>(ref slot);
+        return ref slot.Archetype.Get<T>(ref slot.Slot);
     }
 
     /// <summary>
