@@ -1,8 +1,10 @@
 using System.Buffers;
+using System.Diagnostics.Contracts;
 using Arch.Core.Extensions.Internal;
 using Arch.Core.Utils;
 using Arch.LowLevel.Jagged;
 using Collections.Pooled;
+using CommunityToolkit.HighPerformance;
 
 namespace Arch.Core;
 
@@ -156,6 +158,47 @@ public sealed partial class Archetype
 
         _addEdges = new SparseJaggedArray<Archetype>(BucketSize);
         _removeEdges = new SparseJaggedArray<Archetype>(BucketSize);
+    }
+
+    /// <summary>
+    ///     Returns the component array index of a component.
+    /// </summary>
+    /// <typeparam name="T">The componen type.</typeparam>
+    /// <returns>The index in the <see cref="Components"/> array.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Pure]
+    internal int Index<T>()
+    {
+        var id = Component<T>.ComponentType.Id;
+        Debug.Assert(id != -1 && id < _componentIdToArrayIndex.Length, $"Index is out of bounds, component {typeof(T)} with id {id} does not exist in this chunk.");
+        return _componentIdToArrayIndex.DangerousGetReferenceAt(id);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Pure]
+    internal bool TryIndex<T>(out int i)
+    {
+        var id = Component<T>.ComponentType.Id;
+        Debug.Assert(id != -1, $"Index is out of bounds, component {typeof(T)} with id {id} does not exist in this chunk.");
+
+        if (id >= _componentIdToArrayIndex.Length)
+        {
+            i = -1;
+            return false;
+        }
+
+        i = _componentIdToArrayIndex[id];
+        return i != -1;
+    }
+
+    /// <summary>
+    ///     Returns the component array index of a component.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Pure]
+    internal int Index(int id)
+    {
+        return _componentIdToArrayIndex.DangerousGetReferenceAt(id);
     }
 
     /// <summary>
