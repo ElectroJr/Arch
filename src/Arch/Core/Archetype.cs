@@ -252,7 +252,7 @@ public sealed partial class Archetype
     ///     An array which stores the <see cref="Chunk"/>'s.
     ///     May contain null references since its being pooled, therefore use the <see cref="ChunkCount"/> and <see cref="ChunkCapacity"/> for acessing it.
     /// </summary>
-    public Chunk[] Chunks { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; [MethodImpl(MethodImplOptions.AggressiveInlining)] internal set; }
+    public Chunk[] Chunks;
 
     /// <summary>
     ///     Points to the last <see cref="Chunk"/> that is not yet full.
