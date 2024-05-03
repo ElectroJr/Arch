@@ -160,20 +160,6 @@ public sealed partial class Archetype
         _removeEdges = new SparseJaggedArray<Archetype>(BucketSize);
     }
 
-    /// <summary>
-    ///     Returns the component array index of a component.
-    /// </summary>
-    /// <typeparam name="T">The componen type.</typeparam>
-    /// <returns>The index in the <see cref="Components"/> array.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [Pure]
-    internal int Index<T>()
-    {
-        var id = Component<T>.ComponentType.Id;
-        Debug.Assert(id != -1 && id < _componentIdToArrayIndex.Length, $"Index is out of bounds, component {typeof(T)} with id {id} does not exist in this chunk.");
-        return _componentIdToArrayIndex.DangerousGetReferenceAt(id);
-    }
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Pure]
     internal bool TryIndex<T>(out int i)
@@ -187,18 +173,8 @@ public sealed partial class Archetype
             return false;
         }
 
-        i = _componentIdToArrayIndex[id];
+        i = _componentIdToArrayIndex.DangerousGetReferenceAt(id);
         return i != -1;
-    }
-
-    /// <summary>
-    ///     Returns the component array index of a component.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [Pure]
-    internal int Index(int id)
-    {
-        return _componentIdToArrayIndex.DangerousGetReferenceAt(id);
     }
 
     /// <summary>
